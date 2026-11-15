@@ -7,6 +7,9 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="محول العملات">
+  <meta name="theme-color" content="#1c1c1e">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; user-select: none; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: #1c1c1e; color: #ffffff; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
@@ -404,6 +407,15 @@
       updateUIHeaders(); updateConversion(); closeModal();
     }
     updateUIHeaders(); fetchRates();
+
+    // تسجيل Service Worker للعمل بدون إنترنت
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(() => console.log('✅ PWA Service Worker مفعّل'))
+          .catch(err => console.log('⚠️ SW Error:', err));
+      });
+    }
   </script>
 </body>
 </html>
