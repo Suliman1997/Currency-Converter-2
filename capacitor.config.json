@@ -1,0 +1,6 @@
+{
+  "appId": "Soul.currency.com",
+  "appName": "Currency Converter",
+  "webDir": "www",
+  "bundledWebRuntime": false
+}

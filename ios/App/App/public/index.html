@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>محول العملات</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="محول العملات">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; user-select: none; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #1c1c1e; color: #ffffff; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+    .display-section { flex: 0 0 38%; background-color: #1c1c1e; display: flex; flex-direction: column; justify-content: space-evenly; padding: 45px 20px 10px 20px; }
+    .currency-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
+    .divider { height: 1px; background-color: #2c2c2e; width: 100%; }
+    .currency-selector { display: flex; flex-direction: column; align-items: center; cursor: pointer; min-width: 65px; }
+    .flag-circle { width: 44px; height: 44px; border-radius: 50%; background-color: #2c2c2e; display: flex; align-items: center; justify-content: center; font-size: 28px; margin-bottom: 4px; }
+    .currency-code { font-size: 16px; font-weight: 700; color: #e5e5ea; }
+    .amount-display { text-align: left; flex: 1; padding-right: 15px; overflow: hidden; }
+    .primary-amount { font-size: 38px; font-weight: 600; color: #ffffff; white-space: nowrap; overflow-x: auto; }
+    .secondary-amount { font-size: 36px; font-weight: 500; color: #e5e5ea; white-space: nowrap; overflow-x: auto; }
+    .expression-hint { font-size: 13px; color: #8e8e93; min-height: 16px; }
+    
+    .keypad-section { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(5, 1fr); gap: 1px; background-color: #1c1c1e; }
+    .key { background-color: #3a3a3c; border: none; color: #ffffff; font-size: 24px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .key:active { background-color: #636366; }
+    .key.top-func { background-color: #48484a; font-size: 22px; }
+    .key.operator { background-color: #ff9f0a; font-size: 26px; font-weight: 500; }
+    
+    .clipboard-bar { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background-color: #1c1c1e; height: 46px; }
+    .clip-btn { background-color: #2c2c2e; border: none; color: #ff9f0a; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+    .clip-btn:active { background-color: #48484a; }
+
+    .footer-bar { height: 48px; background-color: #1c1c1e; display: flex; align-items: center; justify-content: space-between; padding: 0 22px; }
+    .footer-btn { background: none; border: none; color: #ffffff; font-size: 22px; cursor: pointer; }
+    .rate-info { text-align: center; line-height: 1.3; }
+    .rate-text { font-size: 13px; font-weight: 600; }
+    .update-status { font-size: 12px; color: #30d158; }
+    
+    /* إشعار التنبيه المؤقت */
+    .toast { position: fixed; top: 60px; left: 50%; transform: translateX(-50%); background-color: rgba(48, 209, 88, 0.9); color: #fff; padding: 8px 16px; border-radius: 10px; font-size: 14px; font-weight: 600; z-index: 1000; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+    .toast.error { background-color: rgba(255, 69, 58, 0.9); }
+
+    .modal { position: fixed; inset: 0; background-color: rgba(0,0,0,0.5); z-index: 100; display: none; align-items: flex-end; justify-content: center; padding: 20px; }
+    .modal.active { display: flex; }
+    .modal-content { background-color: #2c2c2e; width: 100%; max-width: 380px; border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; max-height: 75vh; box-shadow: 0 10px 30px rgba(0,0,0,0.5); animation: slideUp 0.25s ease-out; }
+    @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+    
+    .modal-header { padding: 12px 16px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #3a3a3c; background-color: #2c2c2e; }
+    .back-btn { background: none; border: none; color: #ff9f0a; font-size: 18px; font-weight: bold; cursor: pointer; padding: 4px 8px; }
+    .search-input { flex: 1; background-color: #3a3a3c; border: none; padding: 10px 12px; border-radius: 10px; color: #fff; font-size: 15px; outline: none; direction: rtl; }
+    
+    .menu-options { display: flex; flex-direction: column; padding: 8px 0; }
+    .menu-item { background: none; border: none; color: #ffffff; font-size: 16px; padding: 14px 20px; text-align: right; display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+    .menu-item:active { background-color: #3a3a3c; }
+
+    .currency-list { flex: 1; overflow-y: auto; padding: 0 8px; }
+    .currency-item { display: flex; align-items: center; justify-content: space-between; padding: 12px 12px; border-bottom: 1px solid #3a3a3c; cursor: pointer; border-radius: 10px; margin: 4px 0; }
+    .currency-item:active { background-color: #3a3a3c; }
+    .item-left { display: flex; align-items: center; gap: 12px; }
+    .item-flag { font-size: 24px; }
+    .item-details { display: flex; flex-direction: column; }
+    .item-code { font-size: 15px; font-weight: 700; }
+    .item-name { font-size: 12px; color: #8e8e93; }
+  </style>
+</head>
+<body>
+  <div class="toast" id="toastMsg">تم النسخ بنجاح</div>
+
+  <div class="display-section">
+    <div class="currency-row">
+      <div class="currency-selector" onclick="openModal('from')">
+        <div class="flag-circle" id="fromFlag">🇺🇦</div>
+        <span class="currency-code" id="fromCode">UAH</span>
+      </div>
+      <div class="amount-display">
+        <div class="expression-hint" id="expressionHint"></div>
+        <div class="primary-amount" id="fromAmount">0</div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div class="currency-row">
+      <div class="currency-selector" onclick="openModal('to')">
+        <div class="flag-circle" id="toFlag">🇸🇦</div>
+        <span class="currency-code" id="toCode">SAR</span>
+      </div>
+      <div class="amount-display">
+        <div class="secondary-amount" id="toAmount">0.00</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="keypad-section">
+    <button class="key operator" onclick="appendOperator('/')">÷</button>
+    <button class="key top-func" onclick="swapCurrencies()">⇅</button>
+    <button class="key top-func" onclick="backspace()">⌫</button>
+    <button class="key top-func" onclick="clearAll()">C</button>
+    
+    <button class="key operator" onclick="appendOperator('*')">×</button>
+    <button class="key" onclick="appendNumber('9')">9</button>
+    <button class="key" onclick="appendNumber('8')">8</button>
+    <button class="key" onclick="appendNumber('7')">7</button>
+    
+    <button class="key operator" onclick="appendOperator('-')">−</button>
+    <button class="key" onclick="appendNumber('6')">6</button>
+    <button class="key" onclick="appendNumber('5')">5</button>
+    <button class="key" onclick="appendNumber('4')">4</button>
+    
+    <button class="key operator" onclick="appendOperator('+')">+</button>
+    <button class="key" onclick="appendNumber('3')">3</button>
+    <button class="key" onclick="appendNumber('2')">2</button>
+    <button class="key" onclick="appendNumber('1')">1</button>
+    
+    <button class="key operator" onclick="calculateResult()">=</button>
+    <button class="key" onclick="appendDot()">.</button>
+    <button class="key" onclick="appendNumber('0')">0</button>
+    <button class="key" onclick="applyPercent()">%</button>
+  </div>
+
+  <div class="clipboard-bar">
+    <button class="clip-btn" onclick="copyAmount()">📋 نسخ</button>
+    <button class="clip-btn" onclick="pasteAmount()">📥 لصق</button>
+  </div>
+
+  <div class="footer-bar">
+    <button class="footer-btn" onclick="openSettingsMenu()">⋮</button>
+    <div class="rate-info">
+      <div class="rate-text" id="rateText">1 SAR = -- UAH</div>
+      <div class="update-status" id="updateStatus">جاري التحديث...</div>
+    </div>
+    <button class="footer-btn" onclick="fetchRates(true)">↻</button>
+  </div>
+
+  <div class="modal" id="currencyModal" onclick="checkCloseModal(event)">
+    <div class="modal-content" id="modalContent">
+      <div class="modal-header" id="modalHeader">
+        <button class="back-btn" onclick="closeModal()">✕</button>
+        <input type="text" class="search-input" id="searchInput" placeholder="ابحث بالاسم أو الرمز..." oninput="filterCurrencies()">
+      </div>
+      <div class="currency-list" id="currencyList"></div>
+    </div>
+  </div>
+
+  <script>
+    const CURRENCIES = [
+      { code: 'SAR', name: 'ريال سعودي', flag: '🇸🇦' },
+      { code: 'USD', name: 'دولار أمريكي', flag: '🇺🇸' },
+      { code: 'EUR', name: 'يورو أوروبي', flag: '🇪🇺' },
+      { code: 'AED', name: 'درهم إماراتي', flag: '🇦🇪' },
+      { code: 'KWD', name: 'دينار كويتي', flag: '🇰🇼' },
+      { code: 'QAR', name: 'ريال قطري', flag: '🇶🇦' },
+      { code: 'BHD', name: 'دينار بحريني', flag: '🇧🇭' },
+      { code: 'OMR', name: 'ريال عماني', flag: '🇴🇲' },
+      { code: 'UAH', name: 'هريفنيا أوكرانية', flag: '🇺🇦' },
+      { code: 'GBP', name: 'جنيه إسترليني', flag: '🇬🇧' },
+      { code: 'EGP', name: 'جنيه مصري', flag: '🇪🇬' },
+      { code: 'JOD', name: 'دينار أردني', flag: '🇯🇴' },
+      { code: 'TRY', name: 'ليرة تركية', flag: '🇹🇷' },
+      { code: 'JPY', name: 'ين ياباني', flag: '🇯🇵' },
+      { code: 'CNY', name: 'يوان صيني', flag: '🇨🇳' },
+      { code: 'CAD', name: 'دولار كندي', flag: '🇨🇦' },
+      { code: 'AUD', name: 'دولار أسترالي', flag: '🇦🇺' },
+      { code: 'CHF', name: 'فرنك سويسري', flag: '🇨🇭' },
+      { code: 'INR', name: 'روبية هندية', flag: '🇮🇳' },
+      { code: 'PKR', name: 'روبية باكستانية', flag: '🇵🇰' },
+      { code: 'PHP', name: 'بيزو فلبيني', flag: '🇵🇭' },
+      { code: 'IDR', name: 'روبية إندونيسية', flag: '🇮🇩' },
+      { code: 'MYR', name: 'رينغيت ماليزي', flag: '🇲🇾' },
+      { code: 'THB', name: 'بات تايلاندي', flag: '🇹🇭' },
+      { code: 'KRW', name: 'وون كوري جنوبي', flag: '🇰🇷' },
+      { code: 'RUB', name: 'روبل روسي', flag: '🇷🇺' },
+      { code: 'BRL', name: 'ريال برازيلي', flag: '🇧🇷' },
+      { code: 'MAD', name: 'درهم مغربي', flag: '🇲🇦' },
+      { code: 'TND', name: 'دينار تونسي', flag: '🇹🇳' },
+      { code: 'DZD', name: 'دينار جزائري', flag: '🇩🇿' },
+      { code: 'IQD', name: 'دينار عراقي', flag: '🇮🇶' },
+      { code: 'LBP', name: 'ليرة لبنانية', flag: '🇱🇧' },
+      { code: 'SYP', name: 'ليرة سورية', flag: '🇸🇾' },
+      { code: 'YER', name: 'ريال يمني', flag: '🇾🇪' },
+      { code: 'SDG', name: 'جنيه سوداني', flag: '🇸🇩' },
+      { code: 'LYD', name: 'دينار ليبي', flag: 'LYD' },
+      { code: 'SEK', name: 'كرونة سويدية', flag: '🇸🇪' },
+      { code: 'NOK', name: 'كرونة نرويجية', flag: '🇳🇴' },
+      { code: 'DKK', name: 'كرونة دنماركية', flag: 'DKK' },
+      { code: 'PLN', name: 'زلوتي بولندي', flag: '🇵🇱' },
+      { code: 'CZK', name: 'كرونة تشيكية', flag: '🇨🇿' },
+      { code: 'HUF', name: 'فورنت مجري', flag: '🇭🇺' },
+      { code: 'RON', name: 'ليو روماني', flag: '🇷🇴' },
+      { code: 'BGN', name: 'ليف بلغاري', flag: '🇧🇬' },
+      { code: 'ZAR', name: 'راند جنوب أفريقي', flag: '🇿🇦' },
+      { code: 'NZD', name: 'دولار نيوزيلندي', flag: '🇳🇿' },
+      { code: 'SGD', name: 'دولار سنغافوري', flag: '🇸🇬' },
+      { code: 'HKD', name: 'دولار هونغ كونغ', flag: '🇭🇰' },
+      { code: 'TWD', name: 'دولار تايواني', flag: '🇹🇼' },
+      { code: 'MXN', name: 'بيزو مكسيكي', flag: '🇲🇽' },
+      { code: 'ARS', name: 'بيزو أرجنتيني', flag: '🇦🇷' },
+      { code: 'CLP', name: 'بيزو تشيلي', flag: '🇨🇱' },
+      { code: 'COP', name: 'بيزو كولومبي', flag: '🇨🇴' },
+      { code: 'GEL', name: 'لاري جورجي', flag: '🇬🇪' },
+      { code: 'AZN', name: 'مانات أذربيجاني', flag: '🇦🇿' },
+      { code: 'KZT', name: 'تينغ كازاخستاني', flag: '🇰🇿' },
+      { code: 'UZS', name: 'سوم أوزبكي', flag: '🇺🇿' },
+      { code: 'BDT', name: 'تاكا بنغلاديشي', flag: '🇧🇩' },
+      { code: 'LKR', name: 'روبية سريلانكية', flag: '🇱🇰' },
+      { code: 'NPR', name: 'روبية نيبالية', flag: '🇳🇵' },
+      { code: 'VND', name: 'دونغ فيتنامي', flag: '🇻🇳' },
+      { code: 'NGN', name: 'نايرا نيجيري', flag: '🇳🇬' },
+      { code: 'KES', name: 'شلن كيني', flag: '🇰🇪' },
+      { code: 'ETB', name: 'بير إثيوبي', flag: '🇪🇹' }
+    ];
+    let fromCurrency = localStorage.getItem('fromCurr') || 'UAH';
+    let toCurrency = localStorage.getItem('toCurr') || 'SAR';
+    let currentInput = '0';
+    let rates = {};
+    let selectingTarget = 'from';
+    let modalType = 'currency';
+    let historyCurrencies = JSON.parse(localStorage.getItem('currencyHistory') || '["SAR", "USD", "EUR", "UAH"]');
+    let usageCounts = JSON.parse(localStorage.getItem('currencyUsage') || '{}');
+
+    function showToast(message, isError = false) {
+      const toast = document.getElementById('toastMsg');
+      toast.innerText = message;
+      toast.className = isError ? 'toast error' : 'toast';
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 2000);
+    }
+
+    async function fetchRates(manual = false) {
+      const statusEl = document.getElementById('updateStatus');
+      if (manual) statusEl.innerText = 'جاري التحديث...';
+      try {
+        const res = await fetch('https://open.er-api.com/v6/latest/USD');
+        const data = await res.json();
+        if (data && data.rates) {
+          rates = data.rates;
+          localStorage.setItem('cachedRates', JSON.stringify(rates));
+          statusEl.innerText = 'للتو';
+          statusEl.style.color = '#30d158';
+          updateConversion();
+        }
+      } catch (e) {
+        const cached = localStorage.getItem('cachedRates');
+        if (cached) {
+          rates = JSON.parse(cached);
+          statusEl.innerText = 'محفوظ';
+          updateConversion();
+        }
+      }
+    }
+    function getCurrencyObj(code) { return CURRENCIES.find(c => c.code === code) || { code, name: code, flag: '🏳️' }; }
+    function updateUIHeaders() {
+      const f = getCurrencyObj(fromCurrency), t = getCurrencyObj(toCurrency);
+      document.getElementById('fromFlag').innerText = f.flag;
+      document.getElementById('fromCode').innerText = f.code;
+      document.getElementById('toFlag').innerText = t.flag;
+      document.getElementById('toCode').innerText = t.code;
+    }
+    function evaluateExpression(expr) {
+      try {
+        let clean = expr.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-').replace(/[+\-*/.]+$/, '');
+        if (!clean) return 0;
+        const val = Function('"use strict";return (' + clean + ')')();
+        return isFinite(val) ? val : 0;
+      } catch { return 0; }
+    }
+    function updateConversion() {
+      document.getElementById('fromAmount').innerText = currentInput || '0';
+      const numericVal = evaluateExpression(currentInput);
+      document.getElementById('expressionHint').innerText = /[+\-*/]/.test(currentInput) ? `= ${numericVal.toLocaleString('en-US', { maximumFractionDigits: 4 })}` : '';
+      if (rates[fromCurrency] && rates[toCurrency]) {
+        const converted = numericVal * (rates[toCurrency] / rates[fromCurrency]);
+        document.getElementById('toAmount').innerText = converted.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        document.getElementById('rateText').innerText = `1 ${toCurrency} = ${(rates[fromCurrency] / rates[toCurrency]).toFixed(2)} ${fromCurrency}`;
+      }
+    }
+    function appendNumber(num) { currentInput = currentInput === '0' ? num : currentInput + num; updateConversion(); }
+    function appendDot() {
+      const last = currentInput.split(/[+\-*/]/).pop();
+      if (!last.includes('.')) { currentInput += (last === '' ? '0.' : '.'); updateConversion(); }
+    }
+    function appendOperator(op) {
+      if (!currentInput) return;
+      currentInput = /[+\-*/.]$/.test(currentInput) ? currentInput.slice(0, -1) + op : currentInput + op;
+      updateConversion();
+    }
+    function applyPercent() { currentInput = String(evaluateExpression(currentInput) / 100); updateConversion(); }
+    function calculateResult() { currentInput = String(Number(evaluateExpression(currentInput).toFixed(4))); updateConversion(); }
+    function clearAll() { currentInput = '0'; updateConversion(); }
+    function backspace() { currentInput = currentInput.length <= 1 ? '0' : currentInput.slice(0, -1); updateConversion(); }
+    
+    // تصحيح زر تبديل العملات (القلب)
+    function swapCurrencies() {
+      let temp = fromCurrency;
+      fromCurrency = toCurrency;
+      toCurrency = temp;
+      localStorage.setItem('fromCurr', fromCurrency);
+      localStorage.setItem('toCurr', toCurrency);
+      updateUIHeaders();
+      updateConversion();
+    }
+
+    async function copyAmount() {
+      const val = document.getElementById('fromAmount').innerText;
+      try {
+        await navigator.clipboard.writeText(val);
+        showToast('تم النسخ بنجاح: ' + val);
+      } catch (e) {
+        showToast('تعذر النسخ', true);
+      }
+    }
+
+    async function pasteAmount() {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          currentInput = text.trim();
+          updateConversion();
+          showToast('تم اللصق بنجاح');
+        }
+      } catch (e) {
+        showToast('تعذر الوصول للحافظة', true);
+      }
+    }
+
+    function openModal(target) {
+      selectingTarget = target;
+      modalType = 'currency';
+      document.getElementById('modalHeader').style.display = 'flex';
+      document.getElementById('searchInput').value = '';
+      renderCurrencyList(CURRENCIES);
+      document.getElementById('currencyModal').classList.add('active');
+      setTimeout(() => document.getElementById('searchInput').focus(), 100);
+    }
+
+    function openSettingsMenu() {
+      modalType = 'settings';
+      document.getElementById('modalHeader').style.display = 'none';
+      document.getElementById('currencyList').innerHTML = `
+        <div class="menu-options">
+          <button class="menu-item" onclick="openFavoritesList()"><span>⭐ المفضلة (الأكثر استخداماً)</span></button>
+          <button class="menu-item" onclick="openHistoryList()"><span>🕒 السجل</span></button>
+          <button class="menu-item" onclick="closeModal()" style="color:#ff9f0a;"><span>✕ إلغاء</span></button>
+        </div>
+      `;
+      document.getElementById('currencyModal').classList.add('active');
+    }
+
+    function openHistoryList() {
+      modalType = 'history';
+      document.getElementById('modalHeader').style.display = 'flex';
+      document.getElementById('searchInput').value = '';
+      const historyList = historyCurrencies.map(code => getCurrencyObj(code));
+      renderCurrencyList(historyList);
+    }
+
+    function openFavoritesList() {
+      modalType = 'favorites';
+      document.getElementById('modalHeader').style.display = 'flex';
+      document.getElementById('searchInput').value = '';
+      let sortedCurrencies = [...CURRENCIES].sort((a, b) => {
+        let countA = usageCounts[a.code] || 0;
+        let countB = usageCounts[b.code] || 0;
+        return countB - countA;
+      });
+      renderCurrencyList(sortedCurrencies);
+    }
+
+    function closeModal() { document.getElementById('currencyModal').classList.remove('active'); }
+    function checkCloseModal(e) { if (e.target.id === 'currencyModal') closeModal(); }
+
+    function renderCurrencyList(list) {
+      document.getElementById('currencyList').innerHTML = list.map(c => `
+        <div class="currency-item" onclick="selectCurrency('${c.code}')">
+          <div class="item-left">
+            <span class="item-flag">${c.flag}</span>
+            <div class="item-details"><span class="item-code">${c.code}</span><span class="item-name">${c.name}</span></div>
+          </div>
+          <span style="color:#8e8e93; font-size:13px;">${rates[c.code] ? (rates[c.code] / (rates[fromCurrency] || 1)).toFixed(3) : ''}</span>
+        </div>`).join('');
+    }
+
+    function filterCurrencies() {
+      const q = document.getElementById('searchInput').value.toLowerCase().trim();
+      let sourceList = CURRENCIES;
+      if (modalType === 'history') {
+        sourceList = historyCurrencies.map(code => getCurrencyObj(code));
+      } else if (modalType === 'favorites') {
+        sourceList = [...CURRENCIES].sort((a, b) => (usageCounts[b.code] || 0) - (usageCounts[a.code] || 0));
+      }
+      renderCurrencyList(sourceList.filter(c => c.code.toLowerCase().includes(q) || c.name.includes(q)));
+    }
+
+    function selectCurrency(code) {
+      if (!historyCurrencies.includes(code)) {
+        historyCurrencies.unshift(code);
+        if (historyCurrencies.length > 10) historyCurrencies.pop();
+        localStorage.setItem('currencyHistory', JSON.stringify(historyCurrencies));
+      }
+      usageCounts[code] = (usageCounts[code] || 0) + 1;
+      localStorage.setItem('currencyUsage', JSON.stringify(usageCounts));
+
+      if (selectingTarget === 'from') { fromCurrency = code; localStorage.setItem('fromCurr', code); }
+      else { toCurrency = code; localStorage.setItem('toCurr', code); }
+      updateUIHeaders(); updateConversion(); closeModal();
+    }
+    updateUIHeaders(); fetchRates();
+  </script>
+</body>
+</html>
