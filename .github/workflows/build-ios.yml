@@ -28,26 +28,18 @@ jobs:
       - name: Sync Capacitor iOS
         run: npx cap sync ios
 
-      - name: Install CocoaPods dependencies
+      - name: Resolve Swift Package dependencies
         run: |
-          cd ios/App
-          pod install --repo-update
-
-      - name: Verify workspace exists
-        run: |
-          if [ ! -d "ios/App/App.xcworkspace" ]; then
-            echo "❌ App.xcworkspace not found!"
-            ls -la ios/App/
-            exit 1
-          else
-            echo "✅ App.xcworkspace found"
-          fi
+          cd ios
+          xcodebuild -resolvePackageDependencies \
+            -project App/App.xcodeproj \
+            -scheme App
 
       - name: Build iOS Archive
         run: |
           cd ios
           xcodebuild archive \
-            -workspace App/App.xcworkspace \
+            -project App/App.xcodeproj \
             -scheme App \
             -configuration Release \
             -destination "generic/platform=iOS" \
