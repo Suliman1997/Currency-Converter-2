@@ -1,0 +1,59 @@
+name: Build iOS App
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Sync Capacitor iOS
+        run: npx cap sync ios
+
+      - name: Install CocoaPods dependencies
+        run: |
+          cd ios/App
+          pod install --repo-update
+
+      - name: Verify workspace exists
+        run: |
+          if [ ! -d "ios/App/App.xcworkspace" ]; then
+            echo "❌ App.xcworkspace not found!"
+            ls -la ios/App/
+            exit 1
+          else
+            echo "✅ App.xcworkspace found"
+          fi
+
+      - name: Build iOS Archive
+        run: |
+          cd ios
+          xcodebuild archive \
+            -workspace App/App.xcworkspace \
+            -scheme App \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath $PWD/build/App.xcarchive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Upload iOS Archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: iOS-App-Archive
+          path: ios/build/App.xcarchive
+          retention-days: 7
